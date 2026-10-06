@@ -9,11 +9,16 @@ pipeline {
         CLUSTER_NAME   = 'trend-eks'
     }
 
-    triggers { githubPush() }
+    triggers {
+        githubPush()
+    }
 
     stages {
+
         stage('Checkout') {
-            steps { checkout scm }
+            steps {
+                checkout scm
+            }
         }
 
         stage('Build Docker Image') {
@@ -24,8 +29,13 @@ pipeline {
 
         stage('Push to DockerHub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DH_USER',
+                        passwordVariable: 'DH_PASS'
+                    )
+                ]) {
                     sh '''
                         echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
                         docker push $IMAGE:$TAG
@@ -34,28 +44,49 @@ pipeline {
                 }
             }
         }
-        
-       stage('Deploy to EKS') {
-           steps {
-                  withCredentials([
-            [$class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds']  ]) {
-            sh '''
-                aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
-                sed -i "s|DOCKERHUB_USER/trend-app:latest|$IMAGE:$TAG|" k8s/deployment.yaml
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service.yaml
-                kubectl rollout status deployment/trend-app --timeout=180s
-                kubectl get svc trend-app-svc
-            '''
+
+        stage('Deploy to EKS') {
+            steps {
+                withCredentials([
+                    [
+                        $class: 'AmazonWebServicesCredentialsBinding',
+                        credentialsId: 'aws-creds'
+                    ]
+                ]) {
+                    sh '''
+                        aws sts get-caller-identity
+
+                        aws eks update-kubeconfig \
+                            --region $AWS_REGION \
+                            --name $CLUSTER_NAME
+
+                        sed -i "s|DOCKERHUB_USER/trend-app:latest|$IMAGE:$TAG|" k8s/deployment.yaml
+
+                        kubectl apply -f k8s/deployment.yaml
+                        kubectl apply -f k8s/service.yaml
+
+                        kubectl rollout status deployment/trend-app --timeout=180s
+
+                        kubectl get svc trend-app-svc
+                    '''
+                }
+            }
         }
-    }
-}
-        
+
+    }   // closes stages
 
     post {
-        always  { sh 'docker logout || true' }
-        success { echo 'Deployed successfully.' }
-        failure { echo 'Pipeline failed - check the stage logs.' }
+        always {
+            sh 'docker logout || true'
+        }
+
+        success {
+            echo 'Deployed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed - check the stage logs.'
+        }
     }
-}
+
+} // closes pipeline
