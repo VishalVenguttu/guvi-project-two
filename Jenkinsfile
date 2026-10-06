@@ -36,7 +36,11 @@ pipeline {
         }
 
         stage('Deploy to EKS') {
-            steps {
+            steps {                 
+                   withCredentials([
+                       [$class: 'AmazonWebServicesCredentialsBinding',
+                       credentialsId: 'aws-creds']
+                  ]) {                                  
                 sh '''
                     aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
                     sed -i "s|DOCKERHUB_USER/trend-app:latest|$IMAGE:$TAG|" k8s/deployment.yaml
