@@ -1,6 +1,6 @@
 pipeline {
     agent any
-
+ 
     environment {
         DOCKERHUB_USER = 'vishalsezhiyan'
         IMAGE          = "${DOCKERHUB_USER}/trend-app"

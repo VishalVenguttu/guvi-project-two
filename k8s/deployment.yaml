@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: trend-app
-          image: DOCKERHUB_USER/trend-app:latest   # replaced by Jenkins
+          image: :
           ports:
             - containerPort: 80
           resources:
