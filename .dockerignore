@@ -1,0 +1,6 @@
+.git
+terraform
+k8s
+Jenkinsfile
+*.md
+.env
