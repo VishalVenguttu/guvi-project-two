@@ -1,8 +1,8 @@
 pipeline {
     agent any
-
+ 
     environment {
-        DOCKERHUB_USER = 'vishalsezhiyan/proj-2'
+        DOCKERHUB_USER = 'vishalsezhiyan'
         IMAGE          = "${DOCKERHUB_USER}/trend-app"
         TAG            = "${env.BUILD_NUMBER}"
         AWS_REGION     = 'eu-north-1'
