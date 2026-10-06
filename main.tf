@@ -9,7 +9,7 @@ provider "aws" { region = var.region }
 
 data "aws_availability_zones" "available" { state = "available" }
 
-# ---------------- VPC ----------------
+# ----------------   VPC ----------------
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
