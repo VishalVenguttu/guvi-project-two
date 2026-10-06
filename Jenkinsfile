@@ -35,25 +35,41 @@ pipeline {
             }
         }
 
-        stage('Deploy to EKS') {
-            steps {                 
-                   withCredentials([
-                       [$class: 'AmazonWebServicesCredentialsBinding',
-                       credentialsId: 'aws-creds']
-                  ]) {                                  
-                sh '''
-                    aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
-                    sed -i "s|DOCKERHUB_USER/trend-app:latest|$IMAGE:$TAG|" k8s/deployment.yaml
-                    kubectl apply -f k8s/deployment.yaml
-                    kubectl apply -f k8s/service.yaml
-                    kubectl rollout status deployment/trend-app --timeout=180s
-                    kubectl get svc trend-app-svc
-                '''
-            }
+       stage('Test AWS') {
+    steps {
+        withCredentials([
+            [$class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-creds']
+        ]) {
+            sh '''
+                aws --version
+                aws sts get-caller-identity
+            '''
         }
     }
+}
 
-    post {
+        stage('Deploy to EKS') {
+    steps {
+        withCredentials([
+            [$class: 'AmazonWebServicesCredentialsBinding',
+             credentialsId: 'aws-creds']
+        ]) {
+            sh '''
+                aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
+                sed -i "s|DOCKERHUB_USER/trend-app:latest|$IMAGE:$TAG|" k8s/deployment.yaml
+
+                kubectl apply -f k8s/deployment.yaml
+                kubectl apply -f k8s/service.yaml
+
+                kubectl rollout status deployment/trend-app --timeout=180s
+                kubectl get svc trend-app-svc
+            '''
+        }
+    }
+}
+       post {
         always  { sh 'docker logout || true' }
         success { echo 'Deployed successfully.' }
         failure { echo 'Pipeline failed - check the stage logs.' }
