@@ -1,6 +1,6 @@
 pipeline {
     agent any
- 
+
     environment {
         DOCKERHUB_USER = 'vishalsezhiyan'
         IMAGE          = "${DOCKERHUB_USER}/trend-app"
@@ -35,41 +35,24 @@ pipeline {
             }
         }
 
-       stage('Test AWS') {
-    steps {
-        withCredentials([
-            [$class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds']
-        ]) {
-            sh '''
-                aws --version
-                aws sts get-caller-identity
-            '''
-        }
-    }
-}
-
         stage('Deploy to EKS') {
-    steps {
-        withCredentials([
-            [$class: 'AmazonWebServicesCredentialsBinding',
-             credentialsId: 'aws-creds']
-        ]) {
-            sh '''
-                aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
-
-                sed -i "s|DOCKERHUB_USER/trend-app:latest|$IMAGE:$TAG|" k8s/deployment.yaml
-
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service.yaml
-
-                kubectl rollout status deployment/trend-app --timeout=180s
-                kubectl get svc trend-app-svc
-            '''
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-creds']]) {
+                    sh '''
+                        aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+                        sed -i "s|image: .*|image: $IMAGE:$TAG|" k8s/deployment.yaml
+                        kubectl apply -f k8s/deployment.yaml
+                        kubectl apply -f k8s/service.yaml
+                        kubectl rollout status deployment/trend-app --timeout=180s
+                        kubectl get svc trend-app-svc
+                    '''
+                }
+            }
         }
     }
-}
-       post {
+
+    post {
         always  { sh 'docker logout || true' }
         success { echo 'Deployed successfully.' }
         failure { echo 'Pipeline failed - check the stage logs.' }
