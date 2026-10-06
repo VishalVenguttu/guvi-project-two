@@ -34,23 +34,24 @@ pipeline {
                 }
             }
         }
-
-        stage('Deploy to EKS') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-creds']]) {
-                    sh '''
-                        aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
-                        sed -i "s|image: .*|image: $IMAGE:$TAG|" k8s/deployment.yaml
-                        kubectl apply -f k8s/deployment.yaml
-                        kubectl apply -f k8s/service.yaml
-                        kubectl rollout status deployment/trend-app --timeout=180s
-                        kubectl get svc trend-app-svc
-                    '''
-                }
-            }
+        
+       stage('Deploy to EKS') {
+           steps {
+                  withCredentials([
+            [$class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-creds']  ]) {
+            sh '''
+                aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+                sed -i "s|DOCKERHUB_USER/trend-app:latest|$IMAGE:$TAG|" k8s/deployment.yaml
+                kubectl apply -f k8s/deployment.yaml
+                kubectl apply -f k8s/service.yaml
+                kubectl rollout status deployment/trend-app --timeout=180s
+                kubectl get svc trend-app-svc
+            '''
         }
     }
+}
+        
 
     post {
         always  { sh 'docker logout || true' }
